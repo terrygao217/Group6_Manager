@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第六组 | 荣耀成绩管理系统 V2.0</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --primary-color: #4e73df;
+            --secondary-color: #858796;
+            --accent-color: #1cc88a;
+            --bg-color: #f8f9fc;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: #5a5c69;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+            border-radius: 15px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        header h1 { margin: 0; font-size: 2.2em; letter-spacing: 1px; }
+        header p { margin-top: 8px; opacity: 0.9; }
+
+        /* 顶部管理按钮 */
+        .header-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            transition: 0.3s;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+        .header-btn:hover { background: rgba(255,255,255,0.4); }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: var(--primary-color);
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 0.85em; color: #888; }
+        
+        .form-control {
+            width: 100%; padding: 10px; border: 1px solid #d1d3e2;
+            border-radius: 5px; box-sizing: border-box; font-size: 1em;
+        }
+        select.form-control { background-color: #fff; cursor: pointer; }
+
+        .subject-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+        }
+
+        .btn-submit {
+            width: 100%; padding: 12px; background-color: var(--primary-color);
+            color: white; border: none; border-radius: 5px; font-size: 1.1em;
+            cursor: pointer; transition: background 0.3s; margin-top: 10px;
+        }
+        .btn-submit:hover { background-color: #2e59d9; }
+
+        /* 组员管理区域样式 */
+        #memberManagerSection {
+            display: none; /* 默认隐藏 */
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid var(--accent-color);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .member-tags { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .member-tag {
+            background: #e3e6f0; padding: 5px 12px; border-radius: 15px;
+            display: flex; align-items: center; gap: 8px; font-size: 0.9em;
+        }
+        .member-tag span { cursor: pointer; color: #e74a3b; font-weight: bold; }
+        .add-member-row { display: flex; gap: 10px; margin-top: 10px; }
+
+        /* 表格样式 */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em; }
+        th, td { padding: 10px; text-align: center; border-bottom: 1px solid #e3e6f0; }
+        th { background-color: #f8f9fc; color: var(--primary-color); }
+        .btn-delete { background: #e74a3b; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 0.8em; }
+
+        @media (max-width: 900px) { .dashboard { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>第六组 · 成绩管理中心</h1>
+        <p>Group 6 Leader System | 高效 · 智能 · 荣耀</p>
+        <button class="header-btn" onclick="toggleMemberManager()">👥 管理组员名单</button>
+    </header>
+
+    <div id="memberManagerSection" class="container">
+        <h3 style="margin-top:0; color:var(--primary-color)">组员名册管理</h3>
+        <p style="font-size:0.9em; color:#666">请在此添加第六组的所有成员，添加后录入成绩时可直接选择。</p>
+        
+        <div class="member-tags" id="memberListDisplay">
+            </div>
+
+        <div class="add-member-row">
+            <input type="text" id="newMemberName" class="form-control" placeholder="输入新组员名字" style="width: 200px;">
+            <button onclick="addMember()" class="btn-submit" style="width: auto; margin: 0; background: var(--accent-color);">+ 添加</button>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <div class="input-section">
+            <div class="card">
+                <div class="card-header">
+                    <span>📝 成绩录入</span>
+                </div>
+                <form id="scoreForm">
+                    <div class="form-group">
+                        <label>选择组员</label>
+                        <select id="memberSelect" class="form-control" required>
+                            <option value="" disabled selected>-- 请点击上方"管理组员名单"添加 --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>考试日期 / 批次</label>
+                        <input type="date" id="examDate" class="form-control" required>
+                    </div>
+                    
+                    <div class="subject-grid">
+                        <div class="form-group"><label>语文</label><input type="number" step="0.5" class="form-control score-input" placeholder="0"></div>
+                        <div class="form-group"><label>数学</label><input type="number" step="0.5" class="form-control score-input" placeholder="0"></div>
+                        <div class="form-group"><label>英语</label><input type="number" step="0.5" class="form-control score-input" placeholder="0"></div>
+                        <div class="form-group"><label>物理</label><input type="number" step="0.5" class="form-control score-input" placeholder="0"></div>
+                        <div class="form-group"><label>化学</label><input type="number" step="0.5" class="form-control score-input" placeholder="0"></div>
+                        <div class="form-group"><label>生物</label><input type="number" step="0.5" class="form-control score-input" placeholder="0"></div>
+                        <div class="form-group"><label>政治</label><input type="number" step="0.5" class="form-control score-input" placeholder="0"></div>
+                        <div class="form-group"><label>历史</label><input type="number" step="0.5" class="form-control score-input" placeholder="0"></div>
+                        <div class="form-group"><label>地理</label><input type="number" step="0.5" class="form-control score-input" placeholder="0"></div>
+                    </div>
+
+                    <button type="submit" class="btn-submit">保存并分析</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="display-section">
+            <div class="card">
+                <div class="card-header">
+                    <span>📚 历史成绩档案</span>
+                    <button class="btn-delete" style="background:#888" onclick="clearAllData()">重置系统</button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table id="historyTable">
+                        <thead>
+                            <tr>
+                                <th>组员</th>
+                                <th>日期</th>
+                                <th>总均分</th>
+                                <th>语</th><th>数</th><th>英</th>
+                                <th>物</th><th>化</th><th>生</th>
+                                <th>政</th><th>史</th><th>地</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span>📈 组员状态分布图</span>
+                </div>
+                <div style="height: 300px;">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // === 初始化逻辑 ===
+    document.getElementById('examDate').valueAsDate = new Date();
+    let members = JSON.parse(localStorage.getItem('group6_members')) || ['组长']; // 默认只有组长
+    loadMembersUI();
+    loadData();
+
+    // === 组员管理功能 ===
+    function toggleMemberManager() {
+        const section = document.getElementById('memberManagerSection');
+        if (section.style.display === 'none' || section.style.display === '') {
+            section.style.display = 'block';
+        } else {
+            section.style.display = 'none';
+        }
+    }
+
+    function addMember() {
+        const nameInput = document.getElementById('newMemberName');
+        const name = nameInput.value.trim();
+        if (name && !members.includes(name)) {
+            members.push(name);
+            saveMembers();
+            nameInput.value = '';
+            Swal.fire({
+                toast: true, position: 'top-end', icon: 'success', 
+                title: '组员已添加', showConfirmButton: false, timer: 1500
+            });
+        } else if (members.includes(name)) {
+            Swal.fire('提示', '该组员已存在', 'info');
+        }
+    }
+
+    function removeMember(name) {
+        Swal.fire({
+            title: `删除 ${name}?`,
+            text: "这将从列表中移除，但不会删除该组员已录入的历史成绩。",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e74a3b',
+            confirmButtonText: '移除'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                members = members.filter(m => m !== name);
+                saveMembers();
+            }
+        })
+    }
+
+    function saveMembers() {
+        localStorage.setItem('group6_members', JSON.stringify(members));
+        loadMembersUI();
+    }
+
+    function loadMembersUI() {
+        // 更新标签列表
+        const listDisplay = document.getElementById('memberListDisplay');
+        listDisplay.innerHTML = members.map(m => `
+            <div class="member-tag">${m} <span onclick="removeMember('${m}')">×</span></div>
+        `).join('');
+
+        // 更新下拉菜单
+        const select = document.getElementById('memberSelect');
+        if (members.length === 0) {
+            select.innerHTML = '<option value="" disabled selected>请先添加组员</option>';
+        } else {
+            select.innerHTML = members.map(m => `<option value="${m}">${m}</option>`).join('');
+            // 尝试保持上次选择
+            const lastSelected = localStorage.getItem('last_selected_member');
+            if(lastSelected && members.includes(lastSelected)) {
+                select.value = lastSelected;
+            }
+        }
+    }
+
+    // === 成绩核心逻辑 ===
+    document.getElementById('scoreForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        saveEntry();
+    });
+
+    function saveEntry() {
+        const memberName = document.getElementById('memberSelect').value;
+        if (!memberName) {
+            Swal.fire('哎呀', '请先选择这套成绩属于哪位组员！', 'error');
+            return;
+        }
+        // 记住这次选的人，方便连续录入
+        localStorage.setItem('last_selected_member', memberName);
+
+        const date = document.getElementById('examDate').value;
+        const inputs = document.querySelectorAll('.score-input');
+        let total = 0;
+        let scores = [];
+
+        inputs.forEach(input => {
+            let val = parseFloat(input.value);
+            if (isNaN(val)) val = 0;
+            scores.push(val);
+            total += val;
+        });
+
+        const average = (total / 9).toFixed(2);
+        
+        const newEntry = {
+            id: Date.now(),
+            member: memberName,
+            date: date,
+            scores: scores,
+            average: parseFloat(average)
+        };
+
+        // 读取历史
+        let history = JSON.parse(localStorage.getItem('group6_scores')) || [];
+        
+        // --- 智能进步分析 (只跟自己比) ---
+        // 找到该组员上一次的记录
+        const memberHistory = history.filter(h => h.member === memberName);
+        
+        if (memberHistory.length > 0) {
+            // 按日期排序找到最近的一次
+            memberHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
+            const lastEntry = memberHistory[memberHistory.length - 1];
+            
+            if (newEntry.average > lastEntry.average) {
+                const diff = (newEntry.average - lastEntry.average).toFixed(2);
+                showSuccess(`${memberName} 进步明显！\n比上次均分提高了 ${diff} 分！🚀`);
+            } else if (newEntry.average < lastEntry.average) {
+                Swal.fire({
+                    title: '状态起伏',
+                    text: `${memberName} 此次均分下滑，请组长关注。`,
+                    icon: 'info',
+                    confirmButtonColor: '#4e73df'
+                });
+            } else {
+                Swal.fire('发挥稳定', `${memberName} 成绩保持平稳。`, 'success');
+            }
+        } else {
+            Swal.fire('录入成功', `已建立 ${memberName} 的首个成绩档案！`, 'success');
+        }
+
+        history.push(newEntry);
+        // 保存时按日期总排序
+        history.sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        localStorage.setItem('group6_scores', JSON.stringify(history));
+
+        // 重置分数框，但保留名字和日期，方便连续录入同一次考试的其他组员
+        inputs.forEach(input => input.value = '');
+        loadData();
+    }
+
+    function loadData() {
+        const history = JSON.parse(localStorage.getItem('group6_scores')) || [];
+        renderTable(history);
+        renderChart(history);
+    }
+
+    function renderTable(data) {
+        const tbody = document.querySelector('#historyTable tbody');
+        tbody.innerHTML = '';
+
+        [...data].reverse().forEach(entry => {
+            const tr = document.createElement('tr');
+            let scoresHtml = '';
+            entry.scores.forEach(s => scoresHtml += `<td>${s}</td>`);
+
+            tr.innerHTML = `
+                <td style="font-weight:bold; color:#4e73df">${entry.member}</td>
+                <td>${entry.date}</td>
+                <td style="font-weight:bold;">${entry.average}</td>
+                ${scoresHtml}
+                <td><button class="btn-delete" onclick="deleteEntry(${entry.id})">×</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function deleteEntry(id) {
+        Swal.fire({
+            title: '删除此条记录？',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e74a3b',
+            confirmButtonText: '删除'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                let history = JSON.parse(localStorage.getItem('group6_scores')) || [];
+                history = history.filter(item => item.id !== id);
+                localStorage.setItem('group6_scores', JSON.stringify(history));
+                loadData();
+            }
+        });
+    }
+
+    function clearAllData() {
+        Swal.fire({
+            title: '确定重置整个系统？',
+            text: "所有组员成绩和名单都将清空！",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e74a3b',
+            confirmButtonText: '确认清空'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                localStorage.removeItem('group6_scores');
+                localStorage.removeItem('group6_members');
+                location.reload();
+            }
+        });
+    }
+
+    function showSuccess(msg) {
+        Swal.fire({
+            title: 'Good Job! 🎉',
+            text: msg,
+            icon: 'success',
+            backdrop: `rgba(0,0,123,0.4) url("https://media.giphy.com/media/26tOZ42Mg6pbTUPVS/giphy.gif") left top no-repeat`,
+            confirmButtonColor: '#1cc88a'
+        });
+    }
+
+    let chartInstance = null;
+    function renderChart(data) {
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        
+        // 我们只取最近的20条数据展示，避免图表太挤
+        const recentData = data.slice(-20);
+        
+        const labels = recentData.map(item => `${item.member} (${item.date.slice(5)})`);
+        const scores = recentData.map(item => item.average);
+
+        if (chartInstance) chartInstance.destroy();
+
+        chartInstance = new Chart(ctx, {
+            type: 'bar', // 改用柱状图，适合展示不同人的分数
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '总平均分',
+                    data: scores,
+                    backgroundColor: 'rgba(78, 115, 223, 0.6)',
+                    borderColor: '#4e73df',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: false, min: 0 } // 根据分数调整
+                }
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
